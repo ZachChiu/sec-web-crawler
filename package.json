@@ -1,0 +1,25 @@
+{
+  "name": "sec-web-crawler",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ZachChiu/sec-web-crawler.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ZachChiu/sec-web-crawler/issues"
+  },
+  "homepage": "https://github.com/ZachChiu/sec-web-crawler#readme",
+  "dependencies": {
+    "chalk": "^5.2.0",
+    "cli-progress": "^3.12.0",
+    "google-spreadsheet": "^3.3.0",
+    "puppeteer": "^19.7.5"
+  }
+}
