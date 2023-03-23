@@ -2,6 +2,7 @@
   "name": "sec-web-crawler",
   "version": "1.0.0",
   "description": "",
+  "type": "module",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -19,6 +20,7 @@
   "dependencies": {
     "chalk": "^5.2.0",
     "cli-progress": "^3.12.0",
+    "dayjs": "^1.11.7",
     "google-spreadsheet": "^3.3.0",
     "puppeteer": "^19.7.5"
   }
