@@ -173,21 +173,21 @@ const main = async () => {
       "C:/Users/awdx8/AppData/Local/Google/Chrome/Application/chrome.exe", // windows
     headless: false,
   });
-  try {
-    const sheet = await getSheet(
-      "1l8Wtu7aLmfPMinx67Ja6EgJoKw8yELcStHyKTB8SCnY",
-      "1248092653"
-    );
-    const rows = await sheet.getRows();
+  const sheet = await getSheet(
+    "1l8Wtu7aLmfPMinx67Ja6EgJoKw8yELcStHyKTB8SCnY",
+    "1248092653"
+  );
+  const rows = await sheet.getRows();
 
-    const bar1 = new cliProgress.SingleBar(
-      {},
-      cliProgress.Presets.shades_classic
-    );
+  const bar1 = new cliProgress.SingleBar(
+    {},
+    cliProgress.Presets.shades_classic
+  );
 
-    bar1.start(rows.length, 0);
+  bar1.start(rows.length, 0);
 
-    for (let i = 90; i < rows.length; i++) {
+  for (let i = 0; i < rows.length; i++) {
+    try {
       const row = rows[i];
       const rowData = row._rawData;
 
@@ -195,8 +195,9 @@ const main = async () => {
       const year = dayjs(rowData[3]).format("YYYY");
       const CIKNumber = rowData[4];
       const secLink = `https://www.sec.gov/edgar/browse/?CIK=${CIKNumber}`;
+      const hasProcessed = !!rowData[7];
 
-      if (secLink) {
+      if (!hasProcessed && CIKNumber && secLink) {
         const page = await browser.newPage();
         await page.goto(secLink);
         await page.setViewport({ width: 1080, height: 1024 });
@@ -207,41 +208,50 @@ const main = async () => {
         let result10K = [];
         let result10Q = [];
 
-        // 找 10-K
-        await domOperate(page, year, "10-K");
-        link10KList = await getLinks(page, year, "10-K");
-        if (link10KList.length) {
-          result10K = await findKeywords(browser, link10KList);
-        }
-        // console.log(chalk.bgBlue("link10KList", link10KList));
-        // console.log(chalk.bgCyan("result10K", result10K));
+        const isError = await page.evaluate(() => {
+          const errorDom = document.querySelector("#errorLoading");
+          return errorDom ? !errorDom.classList.contains("hidden") : false;
+        });
 
-        if (result10K.length) {
-          row["10-K"] = result10K.join("、");
-        } else if (link10KList.length === 0) {
-          row["10-K"] = "no file";
+        if (isError) {
+          row["10-K"] = "error page";
         } else {
-          row["10-K"] = "no match";
-        }
-
-        if (result10K.length === 0) {
-          // 找 10-Q
-          await domOperate(page, year, "10-Q");
-          link10QList = await getLinks(page, year, "10-Q");
-          if (link10QList.length) {
-            result10Q = await findKeywords(browser, link10QList);
-          } else {
-            row["10-Q"] = "no file";
+          // 找 10-K
+          await domOperate(page, year, "10-K");
+          link10KList = await getLinks(page, year, "10-K");
+          if (link10KList.length) {
+            result10K = await findKeywords(browser, link10KList);
           }
-          // console.log(chalk.bgBlueBright("link10QList", link10QList));
-          // console.log(chalk.bgGreenBright("result10Q", result10Q));
+          // console.log(chalk.bgBlue("link10KList", link10KList));
+          // console.log(chalk.bgCyan("result10K", result10K));
 
-          if (result10Q.length) {
-            row["10-Q"] = result10Q.join("、");
-          } else if (link10QList.length === 0) {
-            row["10-Q"] = "no file";
+          if (result10K.length) {
+            row["10-K"] = result10K.join("、");
+          } else if (link10KList.length === 0) {
+            row["10-K"] = "no file";
           } else {
-            row["10-Q"] = "no match";
+            row["10-K"] = "no match";
+          }
+
+          if (result10K.length === 0) {
+            // 找 10-Q
+            await domOperate(page, year, "10-Q");
+            link10QList = await getLinks(page, year, "10-Q");
+            if (link10QList.length) {
+              result10Q = await findKeywords(browser, link10QList);
+            } else {
+              row["10-Q"] = "no file";
+            }
+            // console.log(chalk.bgBlueBright("link10QList", link10QList));
+            // console.log(chalk.bgGreenBright("result10Q", result10Q));
+
+            if (result10Q.length) {
+              row["10-Q"] = result10Q.join("、");
+            } else if (link10QList.length === 0) {
+              row["10-Q"] = "no file";
+            } else {
+              row["10-Q"] = "no match";
+            }
           }
         }
         await save(row);
@@ -249,13 +259,11 @@ const main = async () => {
         await page.close();
       }
       bar1.increment();
+    } catch (error) {
+      console.log(error);
     }
-    bar1.stop();
-  } catch (error) {
-    console.log(error);
-  } finally {
-    await browser.close();
   }
+  bar1.stop();
 };
 
 main();
