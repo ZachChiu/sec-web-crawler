@@ -69,17 +69,14 @@ async function getLinks(page, year, keyword) {
     const trs = await page.$$("#filingsTable tr");
     let links = [];
     for (const tr of trs) {
-      const tdFormType = await tr.$$("td.dtr-control");
-      const tdFilingDate = await tr.$$("td.sorting_1");
-      if (tdFormType.length === 1 && tdFilingDate.length === 1) {
-        const formType = await tdFormType[0].evaluate((el) =>
-          el.textContent.trim()
-        );
-        const filingDate = await tdFilingDate[0].evaluate((el) =>
-          el.textContent.trim()
-        );
-
-        if (formType === keyword && year === dayjs(filingDate).format("YYYY")) {
+      const dataArr = await tr.$$eval("td", async (tdElements) => {
+        return tdElements.map((ele) => ele.textContent);
+      });
+      if (dataArr.length) {
+        const formType = dataArr[0];
+        const reportingDate = dataArr[3].substring(0, 4);
+        console.log(formType, reportingDate);
+        if (formType === keyword && reportingDate === year) {
           const href = await tr.$eval("a", (element) => element.href);
           links.push(href);
         }
@@ -107,6 +104,7 @@ async function findKeywords(browser, links) {
 
     for (let i = 0; i < links.length; i++) {
       await newPage.goto(links[i]);
+      await delay(1000);
 
       const content = await newPage.content();
       for (let j = 0; j < keywords.length; j++) {
@@ -150,15 +148,22 @@ const domOperate = async (page, year, keyword) => {
     // await delay(500);
 
     // 選擇填報日期為 year 年的輸入框
-    const dateFromField = await page.$('input[id="filingDateFrom"]');
-    await dateFromField.click({ clickCount: 3 });
-    await dateFromField.type(year);
-    await dateFromField.press("Enter");
+    console.log("year", year);
+    const processFunc = (inputElement) => {
+      inputElement.value = year;
+    };
+
+    await page.$eval('input[id="filingDateFrom"]', processFunc); // todo BUG!
+    // const dateFromField = await page.$('input[id="filingDateFrom"]');
+    // dateFromField.value = String(Number(year) - 2);
+    // await dateFromField.click({ clickCount: 3 });
+    // await dateFromField.type(String(Number(year) - 2));
+    // await dateFromField.press("Enter");
 
     // 選擇填報日期為 year 年的輸入框
     const dateToField = await page.$('input[id="filingDateTo"]');
     await dateToField.click({ clickCount: 3 });
-    await dateToField.type(year);
+    await dateToField.type("2023");
     await dateToField.press("Enter");
     await delay(500);
   } catch (error) {
@@ -174,8 +179,10 @@ const main = async () => {
     headless: false,
   });
   const sheet = await getSheet(
-    "1l8Wtu7aLmfPMinx67Ja6EgJoKw8yELcStHyKTB8SCnY",
-    "1248092653"
+    // "1l8Wtu7aLmfPMinx67Ja6EgJoKw8yELcStHyKTB8SCnY",
+    // "1248092653"
+    "1LAHxdTf6_K9bYYFANfVMLK7bpYKgbwANlFxgkzQNNc0",
+    "1542530371"
   );
   const rows = await sheet.getRows();
 
@@ -186,21 +193,21 @@ const main = async () => {
 
   bar1.start(rows.length, 0);
 
-  for (let i = 0; i < rows.length; i++) {
+  for (let i = 30; i < 40; i++) {
     try {
       const row = rows[i];
       const rowData = row._rawData;
 
       // const secLink = sheet.getCell(i + 1, 6);
-      const year = dayjs(rowData[3]).format("YYYY");
-      const CIKNumber = rowData[4];
+      const year = dayjs(rowData[7]).format("YYYY");
+      const CIKNumber = rowData[34];
       const secLink = `https://www.sec.gov/edgar/browse/?CIK=${CIKNumber}`;
-      const hasProcessed = !!rowData[7];
+      const hasProcessed = !!rowData[62];
 
       if (!hasProcessed && CIKNumber && secLink) {
         const page = await browser.newPage();
-        await page.goto(secLink);
         await page.setViewport({ width: 1080, height: 1024 });
+        await page.goto(secLink);
         await delay(500);
 
         let link10KList = [];
@@ -264,6 +271,7 @@ const main = async () => {
     }
   }
   bar1.stop();
+  return;
 };
 
 main();
