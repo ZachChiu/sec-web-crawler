@@ -75,7 +75,6 @@ async function getLinks(page, year, keyword) {
       if (dataArr.length) {
         const formType = dataArr[0];
         const reportingDate = dataArr[3].substring(0, 4);
-        console.log(formType, reportingDate);
         if (formType === keyword && reportingDate === year) {
           const href = await tr.$eval("a", (element) => element.href);
           links.push(href);
@@ -104,7 +103,7 @@ async function findKeywords(browser, links) {
 
     for (let i = 0; i < links.length; i++) {
       await newPage.goto(links[i]);
-      await delay(1000);
+      await waitPageVisible(newPage);
 
       const content = await newPage.content();
       for (let j = 0; j < keywords.length; j++) {
@@ -122,6 +121,28 @@ async function findKeywords(browser, links) {
     return [];
   }
 }
+
+/**
+ * 確認頁面是否已讀取完畢
+ * @param {Object} browser browser
+ * @param {Array} links links
+ */
+const waitPageVisible = async (page) => {
+  const isDone = await page.evaluate(() => {
+    const loading = document.querySelector("#xbrl-form-loading");
+    if (!loading || loading.classList.contains("d-none")) {
+      return true;
+    }
+    return false;
+  });
+  if (isDone) {
+    return true;
+  } else {
+    const waitAgain = waitPageVisible(page);
+    await delay(50);
+    return waitAgain;
+  }
+};
 
 /**
  * 操作 Dom 元素
@@ -145,25 +166,19 @@ const domOperate = async (page, year, keyword) => {
     const formTypeSelect = await page.$('input[id="searchbox"]');
     await formTypeSelect.click({ clickCount: 3 });
     await formTypeSelect.type(keyword);
-    // await delay(500);
+    await delay(500);
+
+    const fromYear = String(Number(year) - 2);
+    const dateFromField = await page.$('input[id="filingDateFrom"]');
+    await dateFromField.click({ clickCount: 3 });
+    await dateFromField.type(fromYear);
+    await dateFromField.press("Enter");
 
     // 選擇填報日期為 year 年的輸入框
-    console.log("year", year);
-    const processFunc = (inputElement) => {
-      inputElement.value = year;
-    };
-
-    await page.$eval('input[id="filingDateFrom"]', processFunc); // todo BUG!
-    // const dateFromField = await page.$('input[id="filingDateFrom"]');
-    // dateFromField.value = String(Number(year) - 2);
-    // await dateFromField.click({ clickCount: 3 });
-    // await dateFromField.type(String(Number(year) - 2));
-    // await dateFromField.press("Enter");
-
-    // 選擇填報日期為 year 年的輸入框
+    const toYear = Number(year) + 2;
     const dateToField = await page.$('input[id="filingDateTo"]');
     await dateToField.click({ clickCount: 3 });
-    await dateToField.type("2023");
+    await dateToField.type(toYear <= 2023 ? String(toYear) : "2023");
     await dateToField.press("Enter");
     await delay(500);
   } catch (error) {
@@ -193,7 +208,7 @@ const main = async () => {
 
   bar1.start(rows.length, 0);
 
-  for (let i = 30; i < 40; i++) {
+  for (let i = 0; i < rows.length; i++) {
     try {
       const row = rows[i];
       const rowData = row._rawData;
