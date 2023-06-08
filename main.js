@@ -83,7 +83,7 @@ async function getLinks(page, year, keyword) {
     }
     return links;
   } catch (error) {
-    return null;
+    return [];
   }
 }
 
@@ -139,7 +139,7 @@ const waitPageVisible = async (page) => {
     return true;
   } else {
     const waitAgain = waitPageVisible(page);
-    await delay(50);
+    await delay(100);
     return waitAgain;
   }
 };
@@ -166,7 +166,7 @@ const domOperate = async (page, year, keyword) => {
     const formTypeSelect = await page.$('input[id="searchbox"]');
     await formTypeSelect.click({ clickCount: 3 });
     await formTypeSelect.type(keyword);
-    await delay(500);
+    await delay(1000);
 
     const fromYear = String(Number(year) - 2);
     const dateFromField = await page.$('input[id="filingDateFrom"]');
@@ -180,7 +180,7 @@ const domOperate = async (page, year, keyword) => {
     await dateToField.click({ clickCount: 3 });
     await dateToField.type(toYear <= 2023 ? String(toYear) : "2023");
     await dateToField.press("Enter");
-    await delay(500);
+    await delay(1000);
   } catch (error) {
     throw error;
   }
@@ -223,7 +223,7 @@ const main = async () => {
         const page = await browser.newPage();
         await page.setViewport({ width: 1080, height: 1024 });
         await page.goto(secLink);
-        await delay(500);
+        await delay(1000);
 
         let link10KList = [];
         let link10QList = [];
@@ -278,6 +278,7 @@ const main = async () => {
         }
         await save(row);
 
+        await delay(1000);
         await page.close();
       }
       bar1.increment();
