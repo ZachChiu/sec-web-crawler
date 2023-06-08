@@ -103,7 +103,7 @@ async function findKeywords(browser, links) {
 
     for (let i = 0; i < links.length; i++) {
       await newPage.goto(links[i]);
-      await waitPageVisible(newPage);
+      await waitPageVisible(newPage, "#xbrl-form-loading", "d-none");
 
       const content = await newPage.content();
       for (let j = 0; j < keywords.length; j++) {
@@ -127,18 +127,22 @@ async function findKeywords(browser, links) {
  * @param {Object} browser browser
  * @param {Array} links links
  */
-const waitPageVisible = async (page) => {
-  const isDone = await page.evaluate(() => {
-    const loading = document.querySelector("#xbrl-form-loading");
-    if (!loading || loading.classList.contains("d-none")) {
-      return true;
-    }
-    return false;
-  });
+const waitPageVisible = async (page, id, clazz) => {
+  const isDone = await page.evaluate(
+    (domId, containClazz) => {
+      const loadingDom = document.querySelector(domId);
+      if (!loadingDom || loadingDom.classList.contains(containClazz)) {
+        return true;
+      }
+      return false;
+    },
+    id,
+    clazz
+  );
   if (isDone) {
     return true;
   } else {
-    const waitAgain = waitPageVisible(page);
+    const waitAgain = waitPageVisible(page, id, clazz);
     await delay(100);
     return waitAgain;
   }
@@ -194,8 +198,6 @@ const main = async () => {
     headless: false,
   });
   const sheet = await getSheet(
-    // "1l8Wtu7aLmfPMinx67Ja6EgJoKw8yELcStHyKTB8SCnY",
-    // "1248092653"
     "1LAHxdTf6_K9bYYFANfVMLK7bpYKgbwANlFxgkzQNNc0",
     "1542530371"
   );
@@ -223,7 +225,8 @@ const main = async () => {
         const page = await browser.newPage();
         await page.setViewport({ width: 1080, height: 1024 });
         await page.goto(secLink);
-        await delay(1000);
+        await delay(100);
+        await waitPageVisible(page, "#loading", "hidden");
 
         let link10KList = [];
         let link10QList = [];
@@ -244,9 +247,6 @@ const main = async () => {
           if (link10KList.length) {
             result10K = await findKeywords(browser, link10KList);
           }
-          // console.log(chalk.bgBlue("link10KList", link10KList));
-          // console.log(chalk.bgCyan("result10K", result10K));
-
           if (result10K.length) {
             row["10-K"] = result10K.join("、");
           } else if (link10KList.length === 0) {
@@ -264,9 +264,6 @@ const main = async () => {
             } else {
               row["10-Q"] = "no file";
             }
-            // console.log(chalk.bgBlueBright("link10QList", link10QList));
-            // console.log(chalk.bgGreenBright("result10Q", result10Q));
-
             if (result10Q.length) {
               row["10-Q"] = result10Q.join("、");
             } else if (link10QList.length === 0) {
@@ -278,7 +275,7 @@ const main = async () => {
         }
         await save(row);
 
-        await delay(1000);
+        await delay(2000);
         await page.close();
       }
       bar1.increment();
