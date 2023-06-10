@@ -74,7 +74,7 @@ async function getLinks(page, year, keyword) {
       });
       if (dataArr.length) {
         const formType = dataArr[0];
-        const reportingDate = dataArr[3].substring(0, 4);
+        const reportingDate = dataArr[2].substring(0, 4);
         if (formType === keyword && reportingDate === year) {
           const href = await tr.$eval("a", (element) => element.href);
           links.push(href);
@@ -113,6 +113,7 @@ async function findKeywords(browser, links) {
           match.push(j + 1);
         }
       }
+      await delay(1000);
     }
     await newPage.close();
 
@@ -175,14 +176,14 @@ const domOperate = async (page, year, keyword) => {
     const fromYear = String(Number(year) - 2);
     const dateFromField = await page.$('input[id="filingDateFrom"]');
     await dateFromField.click({ clickCount: 3 });
-    await dateFromField.type(fromYear);
+    await dateFromField.type(year);
     await dateFromField.press("Enter");
 
     // 選擇填報日期為 year 年的輸入框
     const toYear = Number(year) + 2;
     const dateToField = await page.$('input[id="filingDateTo"]');
     await dateToField.click({ clickCount: 3 });
-    await dateToField.type(toYear <= 2023 ? String(toYear) : "2023");
+    await dateToField.type(year);
     await dateToField.press("Enter");
     await delay(1000);
   } catch (error) {
@@ -193,13 +194,13 @@ const domOperate = async (page, year, keyword) => {
 const main = async () => {
   const browser = await puppeteer.launch({
     executablePath:
-      // "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", // MAC
-      "C:/Users/awdx8/AppData/Local/Google/Chrome/Application/chrome.exe", // windows
+      "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", // MAC
+    // "C:/Users/awdx8/AppData/Local/Google/Chrome/Application/chrome.exe", // windows
     headless: false,
   });
   const sheet = await getSheet(
-    "1LAHxdTf6_K9bYYFANfVMLK7bpYKgbwANlFxgkzQNNc0",
-    "1542530371"
+    "1PZ1V_AhXh0XSXzaGluLkIvK1IrIUF6qXnMAFd9zJIJQ",
+    "166915423"
   );
   const rows = await sheet.getRows();
 
@@ -216,10 +217,10 @@ const main = async () => {
       const rowData = row._rawData;
 
       // const secLink = sheet.getCell(i + 1, 6);
-      const year = dayjs(rowData[7]).format("YYYY");
-      const CIKNumber = rowData[34];
+      const year = rowData[4]; // dayjs(rowData[7]).format("YYYY");
+      const CIKNumber = rowData[2];
       const secLink = `https://www.sec.gov/edgar/browse/?CIK=${CIKNumber}`;
-      const hasProcessed = !!rowData[62];
+      const hasProcessed = !!rowData[5];
 
       if (!hasProcessed && CIKNumber && secLink) {
         const page = await browser.newPage();
@@ -239,43 +240,43 @@ const main = async () => {
         });
 
         if (isError) {
-          row["10-K"] = "error page";
+          row["DEF 14A"] = "error page";
         } else {
-          // 找 10-K
-          await domOperate(page, year, "10-K");
-          link10KList = await getLinks(page, year, "10-K");
+          // 找 DEF 14A
+          await domOperate(page, year, "DEF 14A");
+          link10KList = await getLinks(page, year, "DEF 14A");
           if (link10KList.length) {
             result10K = await findKeywords(browser, link10KList);
           }
           if (result10K.length) {
-            row["10-K"] = result10K.join("、");
+            row["DEF 14A"] = result10K.join("、");
           } else if (link10KList.length === 0) {
-            row["10-K"] = "no file";
+            row["DEF 14A"] = "no file";
           } else {
-            row["10-K"] = "no match";
+            row["DEF 14A"] = "no match";
           }
 
-          if (result10K.length === 0) {
-            // 找 10-Q
-            await domOperate(page, year, "10-Q");
-            link10QList = await getLinks(page, year, "10-Q");
-            if (link10QList.length) {
-              result10Q = await findKeywords(browser, link10QList);
-            } else {
-              row["10-Q"] = "no file";
-            }
-            if (result10Q.length) {
-              row["10-Q"] = result10Q.join("、");
-            } else if (link10QList.length === 0) {
-              row["10-Q"] = "no file";
-            } else {
-              row["10-Q"] = "no match";
-            }
-          }
+          // if (result10K.length === 0) {
+          //   // 找 10-Q
+          //   await domOperate(page, year, "10-Q");
+          //   link10QList = await getLinks(page, year, "10-Q");
+          //   if (link10QList.length) {
+          //     result10Q = await findKeywords(browser, link10QList);
+          //   } else {
+          //     row["10-Q"] = "no file";
+          //   }
+          //   if (result10Q.length) {
+          //     row["10-Q"] = result10Q.join("、");
+          //   } else if (link10QList.length === 0) {
+          //     row["10-Q"] = "no file";
+          //   } else {
+          //     row["10-Q"] = "no match";
+          //   }
+          // }
         }
         await save(row);
 
-        await delay(2000);
+        await delay(1000);
         await page.close();
       }
       bar1.increment();
