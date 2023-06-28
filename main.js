@@ -4,6 +4,9 @@ import chalk from "chalk";
 import { GoogleSpreadsheet } from "google-spreadsheet";
 import dayjs from "dayjs";
 import { readFile } from "fs/promises";
+import delay from "./utils/delay.js";
+import waitPageVisible from "./utils/waitPageVisible.js";
+import save from "./utils/save.js";
 
 // sheet https://docs.google.com/spreadsheets/d/1l8Wtu7aLmfPMinx67Ja6EgJoKw8yELcStHyKTB8SCnY/edit#gid=1248092653
 // node main
@@ -26,36 +29,8 @@ const getSheet = async (
   await doc.useServiceAccountAuth(credits);
   await doc.loadInfo();
   const sheet = doc.sheetsById[sheetID];
-  //   rows[0]["Disclosure"] = "1";
-  //   save(rows[0]);
-  //   rows[0]._rawData;
-  //   for (row of rows) {
-  //     result.push(row._rawData);
-  //   }
 
   return sheet;
-};
-
-/**
- * 上傳發放狀態
- * @param {Array} row google 列資料
- */
-async function save(row) {
-  try {
-    await row.save();
-  } catch (error) {
-    await save(row);
-  }
-}
-
-/**
- * 延遲 X 秒
- * @param {Number} time time
- */
-const delay = (time) => {
-  return new Promise(function (resolve) {
-    setTimeout(resolve, time);
-  });
 };
 
 /**
@@ -123,32 +98,6 @@ async function findKeywords(browser, links) {
 }
 
 /**
- * 確認頁面是否已讀取完畢
- * @param {Object} browser browser
- * @param {Array} links links
- */
-const waitPageVisible = async (page, id, clazz) => {
-  const isDone = await page.evaluate(
-    (domId, containClazz) => {
-      const loadingDom = document.querySelector(domId);
-      if (!loadingDom || loadingDom.classList.contains(containClazz)) {
-        return true;
-      }
-      return false;
-    },
-    id,
-    clazz
-  );
-  if (isDone) {
-    return true;
-  } else {
-    const waitAgain = waitPageVisible(page, id, clazz);
-    await delay(100);
-    return waitAgain;
-  }
-};
-
-/**
  * 操作 Dom 元素
  * @param {Object} page page
  * @param {String} year year
@@ -210,7 +159,7 @@ const main = async () => {
 
   bar1.start(rows.length, 0);
 
-  for (let i = 0; i < rows.length; i++) {
+  for (let i = 0; i < 2500; i++) {
     try {
       const row = rows[i];
       const rowData = row._rawData;
