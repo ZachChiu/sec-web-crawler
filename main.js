@@ -198,8 +198,8 @@ const main = async () => {
     headless: false,
   });
   const sheet = await getSheet(
-    "1LAHxdTf6_K9bYYFANfVMLK7bpYKgbwANlFxgkzQNNc0",
-    "1542530371"
+    "1_peHmn2NjX_4R40aonPqiaytR8dVGei6OBRojKbgL1I",
+    "1287819765"
   );
   const rows = await sheet.getRows();
 
@@ -248,7 +248,7 @@ const main = async () => {
             result10K = await findKeywords(browser, link10KList);
           }
           if (result10K.length) {
-            row["10-K"] = result10K.join("、");
+            row["10-K"] = String(result10K.join("、"));
           } else if (link10KList.length === 0) {
             row["10-K"] = "no file";
           } else {
@@ -265,7 +265,7 @@ const main = async () => {
               row["10-Q"] = "no file";
             }
             if (result10Q.length) {
-              row["10-Q"] = result10Q.join("、");
+              row["10-Q"] = String(result10Q.join("、"));
             } else if (link10QList.length === 0) {
               row["10-Q"] = "no file";
             } else {
